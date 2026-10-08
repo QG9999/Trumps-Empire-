@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Ultimate Money Clicker</title>
+<style>
+body{background:#2a75d3;color:#fff;font-family:sans-serif;margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh;overflow-x:hidden}
+header{background:#1b5cb8;width:100%;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box}
+.stat{font-weight:bold;font-size:1.4rem;background:rgba(0,0,0,0.2);padding:6px 14px;border-radius:20px}
+#main{flex:1;max-width:600px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding-bottom:80px;width:100%}
+.stack-box{background:#e8f5e9;border:5px solid #81c784;border-radius:12px;width:280px;height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#2e7d32;font-size:5rem;font-weight:900;cursor:pointer;filter:drop-shadow(0 12px 25px rgba(0,0,0,0.5));user-select:none;-webkit-user-select:none;outline:none}
+.stack-box:focus{outline:none}
+.tab{display:none;width:100%;max-width:500px;box-sizing:border-box;padding:20px}
+.tab.active{display:block}
+.panel{background:#1b5cb8;border-radius:12px;padding:15px;margin-bottom:12px}
+.shop-scroll{max-height:340px;overflow-y:auto}
+.shop-item{background:#154a96;margin-bottom:10px;padding:12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;font-size:0.9rem}
+nav{position:fixed;bottom:0;left:0;width:100%;background:#154a96;display:flex;justify-content:space-around;padding:10px 0;z-index:100}
+.nav-btn{background:none;border:none;color:#fff;font-size:0.8rem;display:flex;flex-direction:column;align-items:center;cursor:pointer;opacity:0.7;outline:none}
+.nav-btn.active{opacity:1;color:#4cd137}
+.arcade-btn{background:#fbc531;color:#2f3640;border:none;padding:8px 14px;border-radius:6px;font-weight:bold;cursor:pointer;margin:5px;outline:none}
+.boost-card{background:#154a96;margin-bottom:8px;padding:10px;border-radius:6px;display:flex;justify-content:space-between;align-items:center;font-size:0.85rem}
+button{outline:none}
+button:focus{outline:none}
+</style>
+</head>
+<body>
+
+<header>
+<div class="stat">🇺🇸</div>
+<div class="stat" style="color:#fbc531">$<span id="money">0</span></div>
+<div class="stat" style="font-size:0.95rem">⚡ <span id="total-rate">0</span>/sec</div>
+</header>
+
+<div id="safe" style="display:none;background:#1b5cb8;padding:15px;border-radius:8px;margin:10px;text-align:center;border:2px solid #4cd137;width:90%;max-width:400px">
+<h3 style="color:#4cd137;margin-top:0">📦 6-Hour Offline Safe</h3>
+<p id="safe-text">Welcome back!</p><button onclick="claimSafe()" class="arcade-btn" style="background:#4cd137;color:#fff">Claim</button>
+</div>
+
+<div id="main">
+<div id="tab-business" class="tab active" style="text-align:center">
+<div class="stack-box" id="click-btn">💵<div style="font-size:1.1rem;background:#1b5cb8;color:#fff;padding:4px 14px;border-radius:6px;margin-top:15px">CLICK HERE</div></div>
+<div style="font-size:1rem;color:#fbc531;font-weight:bold;margin-top:8px" id="click-desc">Click Power: 1</div>
+<div id="banner" style="color:#4cd137;font-weight:bold;margin-top:8px;min-height:20px"></div>
+</div>
+
+<div id="tab-reputation" class="tab">
+<h3>⚡ Upgrades & Rebirth</h3>
+<div class="panel"><h4>2x Click Power</h4><button onclick="buyClickUpg()" id="upg-btn" class="arcade-btn" style="background:#4cd137;color:#fff">Buy ($160)</button></div>
+<div class="panel"><h4>Rebirth</h4><p>Level: <span id="r-lvl">0</span> | Next: <span id="r-req">$100 Septendecillion</span></p><button id="r-btn" onclick="rebirth()" class="arcade-btn" style="background:#e84118;color:#fff" disabled>REBIRTH</button></div>
+</div>
+
+<div id="tab-construction" class="tab">
+<h3>🏗️ Business Empire</h3>
+<div class="shop-scroll" id="shop"></div>
+</div>
+
+<div id="tab-location" class="tab" style="text-align:center">
+<h3>🚀 Boosts (<span id="b-count">0</span>/5)</h3>
+<div class="panel"><p style="font-size:0.8rem;color:#b2ebf2;margin:0">Random drops while playing!</p><div id="boosts" style="max-height:180px;overflow-y:auto"></div></div>
+</div>
+
+<div id="tab-vip" class="tab" style="text-align:center">
+<h3>⚙️ Settings</h3>
+<div class="panel"><button onclick="if(confirm('Wipe?')){localStorage.clear();location.reload();}" class="arcade-btn" style="background:#e84118;color:#fff;width:100%">Wipe Save</button></div>
+</div>
+</div>
+
+<nav>
+<button class="nav-btn active" onclick="switchTab('business',this)"><span>💵</span>Business</button>
+<button class="nav-btn" onclick="switchTab('reputation',this)"><span>⭐</span>Reputation</button>
+<button class="nav-btn" onclick="switchTab('construction',this)"><span>🏗️</span>Construction</button>
+<button class="nav-btn" onclick="switchTab('location',this)"><span>🚀</span>Boosts</button>
+<button class="nav-btn" onclick="switchTab('vip',this)"><span>💳</span>VIP</button>
+</nav>
+
+<script>
+let m=0,cPow=1,cps=0,clickTimestamps=[],offline=0,rLvl=0,upgCost=160,upgStep=0,multPow=1,boosts=[],activeB=null,bTime=0,autoT=0;
+const rawB=[
+  ["lemon", "Lemonade Stand", 15, 2],
+  ["store", "Convenience Store", 100, 15],
+  ["bank", "Local Bank", 1100, 90],
+  ["fac", "Factory", 14000, 650],
+  ["mine", "Cryptocurrency Mine", 130000, 4500],
+  ["ship", "Shipping Fleet", 1.4e6, 35000],
+  ["lab", "Tech Laboratory", 20e6, 250e3],
+  ["port", "Quantum Portal", 330e6, 2e6],
+  ["time", "Time Machine", 5.1e9, 18e6],
+  ["anti", "Antimatter Plant", 75e9, 200e8],
+  ["prism", "Prism Forge", 1e12, 2.6e9],
+  ["chanc", "Probability Engine", 15e12, 35e9],
+  ["fract", "Fractal Dimension", 200e12, 500e9],
+  ["jseng", "JavaScript Engine", 3e15, 7e12],
+  ["ai", "AI Core", 50e15, 100e12],
+  ["mega", "Megastructure", 800e15, 1.5e14],
+  ["dyson", "Dyson Swarm", 15e18, 3e16],
+  ["warp", "Warp Drive", 300e18, 60e16],
+  ["sing", "Singularity Generator", 5e21, 1e18],
+  ["mult", "Multiverse Conduit", 100e21, 20e18],
+  ["nebu", "Nebula Harvester", 2e24, 400e18],
+  ["dark", "Dark Matter Accelerator", 40e24, 8e21],
+  ["void", "Void Engine", 800e24, 150e21],
+  ["god", "Celestial Foundry", 1.5e27, 2.2e24],
+  ["etern", "Eternity Engine", 3e30, 5e27],
+  ["omega", "Omega Construct", 6e33, 1e30],
+  ["inf", "Infinity Spire", 1.2e36, 2e32],
+  ["trans", "Transcendent Core", 2.5e39, 4e35],
+  ["genesis", "Genesis Point", 5e42, 8e38],
+  ["apex", "Apex Singularity", 1e45, 2e41],
+  ["horizon", "Absolute Horizon", 2e48, 4e44]
+];
+let b={}; rawB.forEach(x=>b[x[0]]={name:x[1],count:0,cost:x[2],cps:x[3]});
+const snd=new Audio("https://upload.wikimedia.org/wikipedia/commons/3/34/Sound_Effect_-_Whoosh.ogg"); snd.volume=0.4;
+const bg=new Audio("https://upload.wikimedia.org/wikipedia/commons/b/b5/Kevin_MacLeod_-_Aurea_Carmina_-_Full_Mix.ogg");
+bg.loop=true; bg.volume=0.3; bg.onended=()=>bg.play(); document.body.onclick=()=>bg.play();
+
+function fmt(n){
+if(n<1000)return Math.floor(n).toLocaleString();
+const s=["","K","M","B","T","Qa","Qi","Sx","Sp","Oc","No","Dc","UDc","DDc","TDc","QdDc","QnDc","SxDc","SpDc","OcDc","NoDc","Vt","UVt","DVt","TVt","QdVt","QnVt","SxVt","SpVt","OcVt","NoVt","Tg","UTg","DTg","TTg","QdTg","QnTg","SxTg","SpTg","OcTg","NoTg","Qg","UQg","DQg","TQg","QdQg","QnQg","SxQg","SpQg","OcQg","NoQg","Sg","USg","DSg","TSg","QdSg","QnSg","SxSg","SpSg","OcSg","NoSg","St","USt","DSt","TSt","QdSt","QnSt","SxSt","SpSt","OcSt","NoSt","Og","UOg","DOg","TOg","QdOg","QnOg","SxOg","SpOg","OcOg","NoOg","Nn","UNn","DNn","TNn","QdNn","QnNn","SxNn","SpNn","OcNn","NoNn","Nv"];
+let i=Math.floor(Math.log10(n)/3);
+return i>=s.length?n.toExponential(2):(n/Math.pow(10,i*3)).toFixed(2)+" "+s[i];
+}
+
+function showFloat(t){
+let c=document.getElementById("main"),f=document.createElement("div");
+f.innerText=`+${t}`;f.style.cssText=`position:absolute;left:calc(50% + ${(Math.random()-0.5)*60}px);top:150px;color:#fbc531;font-weight:900;font-size:1.5rem;pointer-events:none;transition:all 0.8s ease-out;z-index:50`;
+c.appendChild(f);
+setTimeout(()=>{f.style.transform="translateY(-70px) scale(1.1)";f.style.opacity="0";},10);
+setTimeout(()=>f.remove(),800);
+}
+
+function getClickPower(currentClicksCount){
+let cm=currentClicksCount>15?5:currentClicksCount>10?4:currentClicksCount>6?3:currentClicksCount>2?2:1;
+return (cPow*cm)*multPow*Math.pow(2,rLvl);
+}
+
+function clickAction(auto=false){
+let now = Date.now();
+if(!auto){
+  clickTimestamps.push(now);
+  snd.currentTime=0;snd.play().catch(()=>{});
+}
+clickTimestamps = clickTimestamps.filter(t => now - t < 1000);
+
+let activeClicks = clickTimestamps.length;
+let basePower = getClickPower(activeClicks);
+let totalGain = basePower * (activeB==="20x"?20:1);
+m += totalGain;
+
+if(!auto){
+  showFloat(fmt(totalGain));
+}
+upd();
+}
+document.getElementById("click-btn").onclick=()=>clickAction(false);
+
+function buyClickUpg(){
+if(m>=upgCost){
+  m-=upgCost;
+  multPow*=2;
+  
+  // Custom step sequence: 2x, 2x, 2.5x rotation (160 -> 320 -> 640 -> 1600 -> 3200 -> 6400...)
+  upgStep++;
+  if(upgStep%3===0){
+    upgCost*=2.5;
+  } else {
+    upgCost*=2;
+  }
+  upgCost=Math.round(upgCost);
+
+  document.getElementById("upg-btn").innerText=`Buy ($${fmt(upgCost)})`;
+  upd();
+  save();
+}
+}
+
+function buyBuilding(k){
+let x=b[k];if(m>=x.cost){m-=x.cost;x.count++;cps+=x.cps;x.cost=Math.ceil(x.cost*1.15);upd();updateShop();save();}
+}
+
+function switchTab(id,el){
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+document.getElementById('tab-'+id).classList.add('active');el.classList.add('active');
+}
+
+function updateShop(){
+let c=document.getElementById("shop");
+c.innerHTML="";
+for(let k in b){
+  c.innerHTML+=`<div class="shop-item"><span><b>${b[k].name}</b> (${fmt(b[k].cps)}/s)<br>Cost: <span id="co-${k}">$${fmt(b[k].cost)}</span> | Owned: <span id="cn-${k}">${b[k].count}</span></span><button onclick="buyBuilding('${k}')" class="arcade-btn" style="background:#4cd137;margin:0">Buy</button></div>`;
+}
+}
+
+function upd(){
+let now = Date.now();
+clickTimestamps = clickTimestamps.filter(t => now - t < 1000);
+let activeClicks = clickTimestamps.length;
+let bp = getClickPower(activeClicks);
+
+let clickRate = bp * activeClicks * (activeB==="20x"?20:1);
+let totalRate = cps + clickRate;
+
+document.getElementById("money").innerText=fmt(m);
+document.getElementById("total-rate").innerText=fmt(totalRate);
+document.getElementById("click-desc").innerText=`Click Power: ${fmt(bp)}`;
+}
+
+function save(){localStorage.setItem("clickerData",JSON.stringify({m,multPow,cps,b,rLvl,upgCost,upgStep,boosts,t:Date.now()}));}
+function load(){
+let s=localStorage.getItem("clickerData");if(!s)return;try{
+let d=JSON.parse(s);m=d.m||0;multPow=d.multPow||1;cps=d.cps||0;rLvl=d.rLvl||0;upgCost=d.upgCost||160;upgStep=d.upgStep||0;boosts=d.boosts||[];
+if(d.b)for(let k in d.b){if(b[k]){b[k].count=d.b[k].count;b[k].cost=d.b[k].cost;}}
+document.getElementById("upg-btn").innerText=`Buy ($${fmt(upgCost)})`;
+if(d.t&&cps>0){let el=(Date.now()-d.t)/1000;if(el>3){offline=Math.min(el,21600)*cps;document.getElementById("safe-text").innerText=`Away for ${(el/3600).toFixed(1)} hrs (Max 6 hrs): +$${fmt(offline)}`;document.getElementById("safe").style.display="block";}}
+}catch(e){}
+}
+function claimSafe(){m+=offline;offline=0;document.getElementById("safe").style.display="none";upd();save();}
+
+function checkBoost(){
+if(boosts.length<5){
+let types=["20x Multiplier (30s)","Auto Tap (10/s for 20s)","1 Hour Progress"];
+boosts.push(types[Math.floor(Math.random()*types.length)]);
+updateBoostUI();
+}
+}
+function updateBoostUI(){
+document.getElementById("b-count").innerText=boosts.length;
+let cnt=document.getElementById("boosts");cnt.innerHTML="";
+if(!boosts.length){cnt.innerHTML=`<p style="color:#b2ebf2;font-size:0.8rem">No boosts available.</p>`;return;}
+boosts.forEach((x,i)=>{cnt.innerHTML+=`<div class="boost-card"><span>⚡ ${x}</span><button onclick="useBoost(${i})" class="arcade-btn" style="background:#4cd137;margin:0;padding:4px 10px">Use</button></div>`;});
+}
+function useBoost(i){
+let bName=boosts.splice(i,1)[0];
+if(bName.includes("20x")){activeB="20x";bTime=30;}
+else if(bName.includes("Auto")){autoT=20;}
+else if(bName.includes("1 Hour")){let gain=cps*3600;m+=gain;}
+updateBoostUI();upd();save();
+}
+function rebirth(){
+let req=1e56*Math.pow(4,rLvl);if(m<req||rLvl>=8)return;
+rLvl++;m=0;cps=0;multPow=1;upgCost=160;upgStep=0;for(let k in b){b[k].count=0;}
+rawB.forEach(x=>b[x[0]].cost=x[2]);document.getElementById("shop").innerHTML="";
+document.getElementById("upg-btn").innerText=`Buy ($${fmt(upgCost)})`;
+updateShop();upd();save();alert(`Reborn to Level ${rLvl}!`);
+}
+
+window.onload=()=>{load();updateShop();upd();updateBoostUI();};
+setInterval(()=>{m+=cps;upd();},1000);
+setInterval(checkBoost,40000);
+setInterval(()=>{
+let ban=document.getElementById("banner");
+if(activeB==="20x"&&bTime>0){bTime--;ban.innerText=`🔥 20x Active (${bTime}s)`;if(bTime<=0)activeB=null;}
+else if(autoT>0){autoT--;ban.innerText=`⚡ Auto Tap Active (${autoT}s)`;for(let i=0;i<10;i++)clickAction(true);}
+else{ban.innerText="";}
+let req=1e56*Math.pow(4,rLvl),rBtn=document.getElementById("r-btn");
+document.getElementById("r-lvl").innerText=rLvl;document.getElementById("r-req").innerText=`$${fmt(req)}`;
+rBtn.disabled=m<req;rBtn.style.opacity=m<req?"0.5":"1";
+},1000);
+setInterval(save,10000);
+</script>
+</body>
+</html>
+
+
+
+
+
